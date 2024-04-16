@@ -7,7 +7,7 @@ namespace RealTimeChat.Hubs;
 
 public interface IChatClient
 {
-    public Task ReceiveMessage(string message);
+    public Task ReceiveMessage(string userName, string message);
 }
 
 public class ChatHub : Hub<IChatClient>
@@ -29,7 +29,7 @@ public class ChatHub : Hub<IChatClient>
 
         await Clients
             .Group(connection.ChatRoom)
-            .ReceiveMessage($"{connection.UserName} has joined to {connection.ChatRoom}");
+            .ReceiveMessage("ChatAdmin", $"{connection.UserName} has joined to chat");
     }
 
     public async Task SendMessage(string message)
@@ -42,7 +42,13 @@ public class ChatHub : Hub<IChatClient>
         {
             await Clients
                 .Group(connection.ChatRoom)
-                .ReceiveMessage($"{connection.UserName}: {message}");
+                .ReceiveMessage(connection.UserName, message);
         }
+    }
+
+    public override async Task OnDisconnectedAsync(Exception? exception)
+    {
+        await _cache.RemoveAsync(Context.ConnectionId);
+        await base.OnDisconnectedAsync(exception);
     }
 }
