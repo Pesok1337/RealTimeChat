@@ -4,8 +4,9 @@ import { HubConnectionBuilder } from "@microsoft/signalr";
 import { Chat } from "./components/Chat.jsx";
 
 const App = () => {
-	const [connection, setConnection] = useState();
+	const [connection, setConnection] = useState(null);
 	const [messages, setMessages] = useState([]);
+	const [chatRoom, setChatRoom] = useState([]);
 
 	const joinChat = async (userName, chatRoom) => {
 		var connection = new HubConnectionBuilder()
@@ -17,21 +18,35 @@ const App = () => {
 			setMessages((messages) => [...messages, { userName, message }]);
 		});
 
-		connection
-			.start()
-			.then(() => connection.invoke("JoinChat", { userName, chatRoom }));
+		try {
+			await connection.start();
+			await connection.invoke("JoinChat", { userName, chatRoom });
 
-		setConnection(connection);
+			setConnection(connection);
+			setChatRoom(chatRoom);
+		} catch (error) {
+			console.log(error);
+		}
 	};
 
 	const sendMessage = async (message) => {
 		await connection.invoke("SendMessage", message);
 	};
 
+	const closeChat = async () => {
+		await connection.stop();
+		setConnection(null);
+	};
+
 	return (
 		<div className="min-h-screen flex items-center justify-center bg-gray-100">
 			{connection ? (
-				<Chat messages={messages} sendMessage={sendMessage} />
+				<Chat
+					messages={messages}
+					sendMessage={sendMessage}
+					closeChat={closeChat}
+					chatRoom={chatRoom}
+				/>
 			) : (
 				<WaitingRoom joinChat={joinChat} />
 			)}

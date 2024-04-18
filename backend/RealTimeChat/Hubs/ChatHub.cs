@@ -29,7 +29,7 @@ public class ChatHub : Hub<IChatClient>
 
         await Clients
             .Group(connection.ChatRoom)
-            .ReceiveMessage("ChatAdmin", $"{connection.UserName} has joined to chat");
+            .ReceiveMessage("Admin", $"{connection.UserName} присоединился к чату");
     }
 
     public async Task SendMessage(string message)
@@ -48,7 +48,19 @@ public class ChatHub : Hub<IChatClient>
 
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
-        await _cache.RemoveAsync(Context.ConnectionId);
+        var stringConnection = await _cache.GetAsync(Context.ConnectionId);
+        var connection = JsonSerializer.Deserialize<UserConnection>(stringConnection);
+
+        if (connection is not null)
+        {
+            await _cache.RemoveAsync(Context.ConnectionId);
+            await Groups.RemoveFromGroupAsync(Context.ConnectionId, connection.ChatRoom);
+
+            await Clients
+                .Group(connection.ChatRoom)
+                .ReceiveMessage("Admin", $"{connection.UserName} покинул чат");
+        }
+
         await base.OnDisconnectedAsync(exception);
     }
 }
